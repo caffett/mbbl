@@ -146,6 +146,12 @@ class env(base_env_wrapper.base_env):
                 'gym_dfhopper': 'Hopper-v1',
                 'gym_dfant': 'Ant-v1',
             }
+        if self._current_version in ['0.17.3']:
+            _env_name = {
+                'gym_dfwalker2d': 'Walker2d-v2',
+                'gym_dfhopper': 'Hopper-v2',
+                'gym_dfant': 'Ant-v2',
+            }
         else:
             raise NotImplementedError
 
@@ -178,17 +184,26 @@ class env(base_env_wrapper.base_env):
                 qpos[2:] = data_dict['start_state'][:self._len_qpos - 2]
                 qvel[:] = data_dict['start_state'][self._len_qpos - 2:]
 
-            # reset the state
-            if self._current_version in ['0.7.4', '0.9.4']:
-                self._env.env.data.qpos = qpos.reshape([-1, 1])
-                self._env.env.data.qvel = qvel.reshape([-1, 1])
-            else:
-                self._env.env.sim.data.qpos = qpos.reshape([-1])
-                self._env.env.sim.data.qvel = qpos.reshape([-1])
+                # reset the state
+                if self._current_version in ['0.7.4', '0.9.4']:
+                    self._env.env.data.qpos = qpos.reshape([-1, 1])
+                    self._env.env.data.qvel = qvel.reshape([-1, 1])
+                elif self._current_version in ['0.17.3']:
+                    sim_state = self._env.env.sim.get_state()
+                    sim_state.qpos[:] = qpos.reshape([-1])
+                    sim_state.qvel[:] = qvel.reshape([-1])
+                    self._env.env.sim.set_state(sim_state)
+                else:
+                    self._env.env.sim.data.qpos = qpos.reshape([-1])
+                    self._env.env.sim.data.qvel = qpos.reshape([-1])
 
-            self._env.env.model._compute_subtree()  # pylint: disable=W0212
-            self._env.env.model.forward()
-            self._old_ob = self._get_observation()
+                if self._current_version in ['0.7.4', '0.9.4']:
+                    self._env.env.model._compute_subtree()  # pylint: disable=W0212
+                    self._env.env.model.forward()
+                elif self._current_version in ['0.17.3']:
+                    self._env.env.sim.forward()
+
+                self._old_ob = self._get_observation()
 
         self.set_state = set_state
 

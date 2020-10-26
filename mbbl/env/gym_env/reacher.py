@@ -73,6 +73,10 @@ class env(base_env_wrapper.base_env):
             _env_name = {
                 'gym_reacher': 'Reacher-v1'
             }
+        elif self._current_version in ['0.17.3']:
+            _env_name = {
+                'gym_reacher': 'Reacher-v2'
+            }
         elif self._current_version == NotImplementedError:
             # TODO: other gym versions here
             _env_name = {
@@ -124,12 +128,21 @@ class env(base_env_wrapper.base_env):
             if self._current_version in ['0.7.4', '0.9.4']:
                 self._env.env.data.qpos = qpos.reshape([-1, 1])
                 self._env.env.data.qvel = qvel.reshape([-1, 1])
+            elif self._current_version in ['0.17.3']:
+                sim_state = self._env.env.sim.get_state()
+                sim_state.qpos[:] = qpos.reshape([-1])
+                sim_state.qvel[:] = qvel.reshape([-1])
+                self._env.env.sim.set_state(sim_state)
             else:
                 self._env.env.sim.data.qpos = qpos.reshape([-1])
                 self._env.env.sim.data.qvel = qpos.reshape([-1])
 
-            self._env.env.model._compute_subtree()  # pylint: disable=W0212
-            self._env.env.model.forward()
+            if self._current_version in ['0.7.4', '0.9.4']:
+                self._env.env.model._compute_subtree()  # pylint: disable=W0212
+                self._env.env.model.forward()
+            elif self._current_version in ['0.17.3']:
+                self._env.env.sim.forward()
+
         self.set_state = set_state
 
         def fdynamics(data_dict):
